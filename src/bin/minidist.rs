@@ -1,4 +1,6 @@
 use clap::{Parser, Subcommand};
+use minidist_rs::{init_table, inspect_metadata, inspect_schema};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "minidist")]
@@ -50,9 +52,13 @@ fn main() {
 
     match cli.command {
         Commands::Init { dir, schema } => {
-            println!("INIT:");
-            println!("  dir = {}", dir);
-            println!("  schema = {}", schema);
+            let dir = PathBuf::from(dir);
+            let schema = PathBuf::from(schema);
+
+            match init_table(&dir, &schema) {
+                Ok(()) => println!("Initialized table {:?}", dir),
+                Err(e) => eprintln!("Error: {}", e),
+            }
         }
 
         Commands::Load {
@@ -61,23 +67,43 @@ fn main() {
             sort_key,
             segments,
         } => {
-            println!("LOAD:");
-            println!("  dir = {}", dir);
-            println!("  csv = {}", csv);
-            println!("  sort_key = {}", sort_key);
-            println!("  segments = {}", segments);
+            let dir = PathBuf::from(dir);
+            let csv = PathBuf::from(csv);
+
+            let schema_text = std::fs::read_to_string(dir.join("_schema.ssf"))
+                .map_err(|e| format!("Schema missing: {}", e))
+                .unwrap();
+
+            let schema = minidist_rs::storage_schema::parse_schema_file(&schema_text).unwrap();
+
+            match minidist_rs::storage_load::load_table(
+                &dir,
+                &csv,
+                &sort_key,
+                segments as usize,
+                &schema,
+            ) {
+                Ok(()) => println!("Loaded CSV into {} segments", segments),
+                Err(e) => eprintln!("Error: {}", e),
+            }
         }
 
         Commands::Schema { sub } => match sub {
             SchemaCommands::Show { dir } => {
-                println!("SCHEMA SHOW:");
-                println!("  dir = {}", dir);
+                let path = PathBuf::from(dir);
+                match inspect_schema(&path) {
+                    Ok(contents) => print!("{}", contents),
+                    Err(e) => eprintln!("Error: {}", e),
+                }
             }
         },
 
         Commands::Info { dir } => {
-            println!("INFO:");
-            println!("  dir = {}", dir);
+            let path = PathBuf::from(dir);
+            match inspect_metadata(&path) {
+                Ok(contents) => print!("{}", contents),
+                Err(e) => eprintln!("Error: {}", e),
+            }
         }
     }
 }

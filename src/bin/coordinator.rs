@@ -1,36 +1,52 @@
 use clap::Parser;
+use minidist_rs::coordinator_cluster;
+use minidist_rs::coordinator_query::ping_worker;
+use tokio::time::{Duration, sleep};
 
 #[derive(Parser)]
 #[command(name = "coordinator")]
 #[command(about = "minidist-rs coordinator", long_about = None)]
-struct Cli {
+struct Args {
     #[arg(long)]
     port: u16,
 
-    #[arg(long, value_parser = parse_workers)]
-    workers: (u32, u32),
+    // XXX: Needs `required` to appear in error msg on start up.
+    #[arg(long, required = true, value_parser = parse_workers)]
+    workers: (u16, u16),
+
+    #[arg(long)]
+    table: String,
 }
 
-fn parse_workers(s: &str) -> Result<(u32, u32), String> {
+fn parse_workers(s: &str) -> Result<(u16, u16), String> {
     let parts: Vec<&str> = s.split(',').collect();
     if parts.len() != 2 {
-        return Err("Expected format <min>,<max>".into());
+        return Err("Expected format <start>,<end>".into());
     }
-    let min: u32 = parts[0].parse().map_err(|_| "Invalid min worker value")?;
-    let max: u32 = parts[1].parse().map_err(|_| "Invalid max worker value")?;
+    let start: u16 = parts[0].parse().map_err(|_| "Invalid start worker value")?;
+    let end: u16 = parts[1].parse().map_err(|_| "Invalid end worker value")?;
 
-    if min > max {
-        return Err("min must be <= max".into());
+    if start > end {
+        return Err("start must be <= end".into());
     }
 
-    Ok((min, max))
+    Ok((start, end))
 }
 
-fn main() {
-    let cli = Cli::parse();
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let args = Args::parse();
+    let _ = coordinator_cluster::run(args.workers).await;
 
-    println!("COORDINATOR CONFIG:");
-    println!("  port = {}", cli.port);
-    println!("  workers.min = {}", cli.workers.0);
-    println!("  workers.max = {}", cli.workers.1);
+    loop {
+        for port in args.workers.0..=args.workers.1 {
+            match ping_worker(port).await {
+                Ok(_) => println!("Worker {port} is ALIVE"),
+                Err(_) => println!("Worker {port} is DOWN"),
+            }
+        }
+
+        println!("---");
+        sleep(Duration::from_secs(2)).await;
+    }
 }

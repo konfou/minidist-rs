@@ -5,3 +5,6 @@ pub mod storage_schema;
 
 pub use storage_init::*;
 pub use storage_inspect::*;
+
+pub mod coordinator_cluster;
+pub mod coordinator_query;

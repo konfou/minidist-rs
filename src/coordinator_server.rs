@@ -1,4 +1,4 @@
-use crate::coordinator_query::run_query_on_worker;
+use crate::coordinator_route::run_query_on_worker;
 use crate::rpc::QueryRequest;
 use axum::{Router, extract::State, http::StatusCode, routing::post};
 use std::sync::Arc;

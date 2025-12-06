@@ -9,7 +9,7 @@ pub use storage_inspect::*;
 pub mod rpc;
 
 pub mod coordinator_cluster;
-pub mod coordinator_query;
+pub mod coordinator_route;
 pub mod coordinator_server;
 pub mod worker_exec;
 pub mod worker_server;

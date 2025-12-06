@@ -8,3 +8,4 @@ pub use storage_inspect::*;
 
 pub mod coordinator_cluster;
 pub mod coordinator_query;
+pub mod rpc;

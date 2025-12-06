@@ -1,10 +1,8 @@
 use tokio::process::Command;
 use tokio::time::{Duration, sleep};
 
-pub async fn run(workers: (u16, u16)) -> anyhow::Result<()> {
-    let (start, end) = workers;
-
-    for port in start..=end {
+pub async fn run(worker_ports: &[u16]) -> anyhow::Result<()> {
+    for port in worker_ports {
         println!("Starting worker on port {port}...");
 
         let exe_dir = std::env::current_exe()?.parent().unwrap().to_path_buf();

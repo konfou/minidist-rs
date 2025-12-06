@@ -1,4 +1,5 @@
-use crate::rpc::{PartialAggregate, QueryRequest};
+use crate::rpc::{GroupMap, PartialAggregate, QueryRequest};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct WorkerContext {
@@ -12,13 +13,16 @@ pub fn execute_query(
     req: QueryRequest,
     started: std::time::Instant,
 ) -> PartialAggregate {
-    let rows_scanned = 0u64;
+    let mut rows_scanned = 0u64;
+    let mut groups: GroupMap = HashMap::new();
 
+    //TOOD: impl `group` when start querying
     PartialAggregate {
         worker_port: ctx.port,
         segment: ctx.segment,
         rows_scanned,
-        segments_skipped: 0,
+        segments_skipped: 1,
         exec_ms: started.elapsed().as_millis() as u64,
+        groups,
     }
 }

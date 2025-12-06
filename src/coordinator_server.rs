@@ -1,4 +1,4 @@
-use crate::coordinator_route::run_query_on_worker;
+use crate::coordinator_route::run_query;
 use crate::rpc::QueryRequest;
 use axum::{Router, extract::State, http::StatusCode, routing::post};
 use std::sync::Arc;
@@ -39,16 +39,4 @@ async fn handle_query(State(state): State<AppState>, body: String) -> (StatusCod
         Ok(r) => (StatusCode::OK, r),
         Err(e) => (StatusCode::OK, format!("Error: {}", e)),
     }
-}
-
-pub async fn run_query(worker_ports: &[u16], request: QueryRequest) -> anyhow::Result<String> {
-    let mut partials = Vec::new();
-    for port in worker_ports {
-        match run_query_on_worker(*port, &request).await {
-            Ok(partial) => partials.push(partial),
-            Err(e) => println!("Worker {port} query failed: {}", e),
-        }
-    }
-
-    Ok("XXX: partials gathered".to_string())
 }

@@ -11,6 +11,18 @@ pub fn load_table(
     segments: usize,
     schema: &[ColumnDef],
 ) -> Result<(), String> {
+    let key_col = schema
+        .iter()
+        .find(|c| c.is_key)
+        .ok_or("Schema has no column marked as `key`")?;
+
+    if sort_key != &key_col.name {
+        return Err(format!(
+            "Sort key '{}' does not match schema key '{}'",
+            sort_key, key_col.name
+        ));
+    }
+
     let mut reader = ReaderBuilder::new()
         .has_headers(true)
         .from_path(csv_path)
@@ -42,19 +54,11 @@ pub fn load_table(
         return Err("CSV contains no data rows".into());
     }
 
-    let key_col = schema
-        .iter()
-        .find(|c| c.is_key)
-        .ok_or("Schema has no column marked as `key`")?;
-
     let key_idx = headers
         .iter()
         .position(|h| h == &key_col.name)
         .ok_or_else(|| format!("CSV missing key column '{}'", key_col.name))?;
 
-    // XXX: Unspecified interaction between schema-key and --sort-key.
-    //      Currently --sort-key is not considered.
-    // TODO: Consider --sort-key and how interacts with schema-key.
     rows.sort_by(|a, b| a[key_idx].cmp(&b[key_idx]));
 
     for seg in 0..segments {

@@ -87,6 +87,22 @@ fn storage_load_writes_segments() {
     assert_eq!(amounts1, vec![50.0, 300.0]);
 }
 
+#[test]
+fn storage_load_rejects_mismatched_sort_key() {
+    let tmp = tmp_dir("load-mismatch");
+    let schema_path = tmp.join("sales.ssf");
+    let csv_path = tmp.join("sales.csv");
+    fs::write(&schema_path, SALES_SSF).unwrap();
+    fs::write(&csv_path, SALES_CSV).unwrap();
+    let schema = parse_schema_file(SALES_SSF).unwrap();
+    let err = load_table(&tmp, &csv_path, &"region".to_string(), 2, &schema).unwrap_err();
+    assert!(
+        err.contains("Sort key 'region' does not match schema key 'id'"),
+        "unexpected error: {}",
+        err
+    );
+}
+
 fn read_int64s(path: PathBuf) -> Vec<i64> {
     let mut f = fs::File::open(path).unwrap();
     let mut buf = Vec::new();

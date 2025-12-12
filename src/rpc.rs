@@ -65,6 +65,19 @@ pub struct AggregateState {
     pub count: u64,
     pub min: Option<f64>,
     pub max: Option<f64>,
+    pub value_type: ValueType,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum ValueType {
+    Int,
+    Float,
+}
+
+impl Default for ValueType {
+    fn default() -> Self {
+        ValueType::Float
+    }
 }
 
 pub type GroupAggregate = std::collections::HashMap<String, AggregateState>;

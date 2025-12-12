@@ -97,7 +97,10 @@ fn render_state_value(name: &str, state: &AggregateState) -> String {
         return state.count.to_string();
     }
     if upper.starts_with("SUM") {
-        return format!("{:.3}", state.sum);
+        return match state.value_type {
+            crate::rpc::ValueType::Int => format!("{}", state.sum as i64),
+            crate::rpc::ValueType::Float => format!("{:.3}", state.sum),
+        };
     }
     if upper.starts_with("AVG") {
         if state.count == 0 {
@@ -107,13 +110,19 @@ fn render_state_value(name: &str, state: &AggregateState) -> String {
     }
     if upper.starts_with("MIN") {
         return match state.min {
-            Some(v) => format!("{:.3}", v),
+            Some(v) => match state.value_type {
+                crate::rpc::ValueType::Int => format!("{}", v as i64),
+                crate::rpc::ValueType::Float => format!("{:.3}", v),
+            },
             None => "NULL".into(),
         };
     }
     if upper.starts_with("MAX") {
         return match state.max {
-            Some(v) => format!("{:.3}", v),
+            Some(v) => match state.value_type {
+                crate::rpc::ValueType::Int => format!("{}", v as i64),
+                crate::rpc::ValueType::Float => format!("{:.3}", v),
+            },
             None => "NULL".into(),
         };
     }

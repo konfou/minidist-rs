@@ -25,10 +25,6 @@ pub async fn serve(port: u16, worker_ports: Vec<u16>, table: &str) -> anyhow::Re
 }
 
 async fn handle_query(State(state): State<AppState>, body: String) -> (StatusCode, String) {
-    if body.trim().eq_ignore_ascii_case("PING") {
-        return (StatusCode::OK, "PONG".into());
-    }
-
     match crate::minisql_parse::parse_sql(&body) {
         Ok(mut req) => {
             req.table = state.table.clone();

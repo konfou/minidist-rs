@@ -21,17 +21,6 @@ fn main() -> anyhow::Result<()> {
     let endpoint = format!("{}:{}{}", args.host, args.port, args.path);
     println!("Connecting to coordinator at http://{} ...", endpoint);
 
-    // PING handshake
-    let ping_resp = send_request(&args, "PING")?;
-    if ping_resp.trim() != "PONG" {
-        eprintln!(
-            "Coordinator handshake failed: expected PONG, got {}",
-            ping_resp.trim()
-        );
-        return Ok(());
-    }
-    println!("Coordinator replied: {}", ping_resp.trim());
-
     let mut query_buf = String::new();
     let mut prompt = "minidist> ";
 

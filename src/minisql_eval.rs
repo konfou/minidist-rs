@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read};
 
-use crate::rpc::{AggregateExpr, AggregateFn, AggregateState, FilterExpr, Predicate, ScalarValue};
+use crate::rpc::{
+    AggregateExpr, AggregateFn, AggregateState, FilterExpr, Predicate, ScalarValue, ValueType,
+};
 use crate::storage_schema::{ColumnDef, ColumnType};
 
 pub fn row_matches(filters: &[FilterExpr], row: &HashMap<String, Option<ScalarValue>>) -> bool {
@@ -56,10 +58,8 @@ pub fn apply_agg(
                 .and_then(|c| row.get(c))
                 .and_then(|v| v.clone())
             {
-                if let Some(f) = as_f64(&val) {
-                    state.sum += f;
-                    state.count += 1;
-                }
+                set_value_type(state, &val);
+                accumulate_numeric(state, &val);
             }
         }
         AggregateFn::Min => {
@@ -69,6 +69,7 @@ pub fn apply_agg(
                 .and_then(|c| row.get(c))
                 .and_then(|v| v.clone())
             {
+                set_value_type(state, &val);
                 if let Some(f) = as_f64(&val) {
                     state.min = Some(match state.min {
                         Some(m) => m.min(f),
@@ -84,6 +85,7 @@ pub fn apply_agg(
                 .and_then(|c| row.get(c))
                 .and_then(|v| v.clone())
             {
+                set_value_type(state, &val);
                 if let Some(f) = as_f64(&val) {
                     state.max = Some(match state.max {
                         Some(m) => m.max(f),
@@ -92,6 +94,32 @@ pub fn apply_agg(
                 }
             }
         }
+    }
+}
+
+fn set_value_type(state: &mut AggregateState, val: &ScalarValue) {
+    match val {
+        ScalarValue::Int(_) | ScalarValue::Bool(_) => state.value_type = ValueType::Int,
+        ScalarValue::Float(_) => state.value_type = ValueType::Float,
+        ScalarValue::String(_) => {}
+    }
+}
+
+fn accumulate_numeric(state: &mut AggregateState, val: &ScalarValue) {
+    match val {
+        ScalarValue::Int(i) => {
+            state.sum += *i as f64;
+            state.count += 1;
+        }
+        ScalarValue::Float(f) => {
+            state.sum += *f;
+            state.count += 1;
+        }
+        ScalarValue::Bool(b) => {
+            state.sum += if *b { 1.0 } else { 0.0 };
+            state.count += 1;
+        }
+        ScalarValue::String(_) => {}
     }
 }
 

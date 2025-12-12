@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, Seek, SeekFrom};
 
 use crate::rpc::{
     AggregateExpr, AggregateFn, AggregateState, FilterExpr, Predicate, ScalarValue, ValueType,
@@ -179,7 +179,69 @@ pub enum ReadError {
     Io,
 }
 
+pub enum ReaderState {
+    Raw(BufReader<File>),
+    Rle {
+        reader: BufReader<File>,
+        remaining: u32,
+        current: Option<ScalarValue>,
+    },
+}
+
+pub fn init_reader(path: &std::path::Path, _def: &ColumnDef) -> Option<ReaderState> {
+    let mut file = File::open(path).ok()?;
+    let mut magic = [0u8; 4];
+    if file.read_exact(&mut magic).is_ok() && &magic == b"RLE1" {
+        let reader = BufReader::new(file);
+        Some(ReaderState::Rle {
+            reader,
+            remaining: 0,
+            current: None,
+        })
+    } else {
+        let _ = file.seek(SeekFrom::Start(0));
+        Some(ReaderState::Raw(BufReader::new(file)))
+    }
+}
+
 pub fn read_value(
+    state: &mut ReaderState,
+    col: &ColumnDef,
+) -> Result<Option<ScalarValue>, ReadError> {
+    match state {
+        ReaderState::Raw(reader) => read_value_raw(reader, col),
+        ReaderState::Rle {
+            reader,
+            remaining,
+            current,
+        } => {
+            if *remaining == 0 {
+                // load next run
+                let mut len_buf = [0u8; 4];
+                if reader.read_exact(&mut len_buf).is_err() {
+                    return Err(ReadError::Eof);
+                }
+                *remaining = u32::from_le_bytes(len_buf);
+                let mut null_flag = [0u8; 1];
+                if reader.read_exact(&mut null_flag).is_err() {
+                    return Err(ReadError::Eof);
+                }
+                if null_flag[0] == 0 {
+                    *current = None;
+                } else {
+                    *current = read_scalar(reader, col)?;
+                }
+            }
+            if *remaining == 0 {
+                return Err(ReadError::Eof);
+            }
+            *remaining -= 1;
+            Ok(current.clone())
+        }
+    }
+}
+
+fn read_value_raw(
     reader: &mut BufReader<File>,
     col: &ColumnDef,
 ) -> Result<Option<ScalarValue>, ReadError> {
@@ -190,7 +252,13 @@ pub fn read_value(
     if null_flag[0] == 0 {
         return Ok(None);
     }
+    read_scalar(reader, col)
+}
 
+fn read_scalar(
+    reader: &mut BufReader<File>,
+    col: &ColumnDef,
+) -> Result<Option<ScalarValue>, ReadError> {
     match col.col_type {
         ColumnType::Int32 => {
             let mut buf = [0u8; 4];

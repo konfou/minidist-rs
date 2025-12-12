@@ -104,7 +104,6 @@ pub fn load_table(
     Ok(())
 }
 
-// TODO: Although simple binary format, should document it.
 fn write_value(w: &mut BufWriter<File>, field: &str, col: &ColumnDef) -> Result<(), String> {
     if field.is_empty() {
         if col.nullable {

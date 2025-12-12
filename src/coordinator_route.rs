@@ -6,10 +6,28 @@ use tokio::net::TcpStream;
 
 pub async fn run_query(worker_ports: &[u16], request: QueryRequest) -> anyhow::Result<String> {
     let mut partials = Vec::new();
-    for port in worker_ports {
-        match run_query_on_worker(*port, &request).await {
+    for (idx, port) in worker_ports.iter().enumerate() {
+        let attempt = run_query_on_worker(*port, &request).await;
+        let result = if attempt.is_err() {
+            // one retry
+            run_query_on_worker(*port, &request).await
+        } else {
+            attempt
+        };
+
+        match result {
             Ok(partial) => partials.push(partial),
-            Err(e) => println!("Worker {port} query failed: {}", e),
+            Err(e) => {
+                println!("Worker {port} query failed after retry: {}", e);
+                partials.push(crate::rpc::PartialAggregate {
+                    worker_port: *port,
+                    segment: idx as u32,
+                    rows_scanned: 0,
+                    segments_skipped: 1,
+                    exec_ms: 0,
+                    groups: std::collections::HashMap::new(),
+                });
+            }
         }
     }
 

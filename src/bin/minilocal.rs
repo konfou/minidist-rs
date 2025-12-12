@@ -1,13 +1,12 @@
 use clap::Parser;
 use minidist_rs::coordinator_merge::merge_partials;
-use minidist_rs::minisql_eval::{ReadError, format_scalar, read_value};
+use minidist_rs::minisql_eval::{ReadError, ReaderState, format_scalar, init_reader, read_value};
 use minidist_rs::minisql_parse;
 use minidist_rs::minisql_print::format_results;
 use minidist_rs::rpc::ScalarValue;
 use minidist_rs::storage_schema::ColumnDef;
 use minidist_rs::worker_exec::{WorkerContext, execute_query};
-use std::fs::File;
-use std::io::{self, BufReader, Write};
+use std::io::{self, Write};
 use std::path::Path;
 use std::time::Instant;
 
@@ -124,12 +123,13 @@ fn scan_projections(
         needed.push(name.clone());
     }
 
-    let mut readers: Vec<(String, ColumnDef, BufReader<File>)> = Vec::new();
+    let mut readers: Vec<(String, ColumnDef, ReaderState)> = Vec::new();
     for col in &schema {
         if needed.contains(&col.name) {
             let path = segment_dir.join(format!("{}.bin", col.name));
-            let f = File::open(&path).map_err(|e| format!("open {:?}: {}", path, e))?;
-            readers.push((col.name.clone(), col.clone(), BufReader::new(f)));
+            let reader =
+                init_reader(&path, col).ok_or_else(|| format!("open {:?}: failed", path))?;
+            readers.push((col.name.clone(), col.clone(), reader));
         }
     }
 

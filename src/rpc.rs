@@ -49,7 +49,7 @@ pub struct AggregateExpr {
     pub output_name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct QueryRequest {
     pub query: String,
     pub projections: Vec<String>,

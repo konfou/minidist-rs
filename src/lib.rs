@@ -6,7 +6,9 @@ pub mod storage_schema;
 pub use storage_init::*;
 pub use storage_inspect::*;
 
+pub mod minisql_eval;
 pub mod minisql_parse;
+pub mod minisql_print;
 pub mod rpc;
 
 pub mod coordinator_cluster;

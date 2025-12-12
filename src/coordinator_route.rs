@@ -1,4 +1,5 @@
-use crate::coordinator_merge::{format_results, merge_partials};
+use crate::coordinator_merge::merge_partials;
+use crate::minisql_print::format_results;
 use crate::rpc::{PartialAggregate, QueryRequest};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -18,6 +19,7 @@ pub async fn run_query(worker_ports: &[u16], request: QueryRequest) -> anyhow::R
         rows_scanned,
         segments_skipped,
         exec_ms,
+        &request.group_by,
     ))
 }
 

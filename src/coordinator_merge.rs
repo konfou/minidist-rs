@@ -26,7 +26,7 @@ pub fn merge_partials(partials: &[PartialAggregate]) -> (GroupMap, u64, u64, u64
     (cuml, rows_scanned, segments_skipped, exec_ms)
 }
 
-fn merge_state(dst: &mut AggregateState, src: &AggregateState) {
+pub fn merge_state(dst: &mut AggregateState, src: &AggregateState) {
     dst.sum += src.sum;
     dst.count += src.count;
 
@@ -43,23 +43,4 @@ fn merge_state(dst: &mut AggregateState, src: &AggregateState) {
         (Some(a), None) => Some(a),
         (None, None) => None,
     };
-}
-
-pub fn format_results(
-    cuml: GroupMap,
-    rows_scanned: u64,
-    segments_skipped: u64,
-    exec_ms: u64,
-) -> String {
-    let mut out = String::new();
-    //TODO: impl
-    out.push_str("<Response>");
-    out.push_str(&format!(
-        "Execution Details:\n\
-         Rows scanned:       {}\n\
-         Segments skipped:   {}\n\
-         Execution time:     {} ms",
-        rows_scanned, segments_skipped, exec_ms
-    ));
-    out
 }

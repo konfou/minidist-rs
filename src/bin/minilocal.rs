@@ -1,6 +1,15 @@
 use clap::Parser;
+use minidist_rs::coordinator_merge::merge_partials;
+use minidist_rs::minisql_eval::{ReadError, format_scalar, read_value};
 use minidist_rs::minisql_parse;
-use std::io::{self, Write};
+use minidist_rs::minisql_print::format_results;
+use minidist_rs::rpc::ScalarValue;
+use minidist_rs::storage_schema::ColumnDef;
+use minidist_rs::worker_exec::{WorkerContext, execute_query};
+use std::fs::File;
+use std::io::{self, BufReader, Write};
+use std::path::Path;
+use std::time::Instant;
 
 #[derive(Parser, Debug)]
 #[command(name = "minilocal")]
@@ -15,6 +24,12 @@ struct Args {
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+    let table_path = Path::new(&args.table);
+    let schema_path = table_path.join("_schema.ssf");
+    if !schema_path.exists() {
+        anyhow::bail!("Table not found or missing _schema.ssf: {}", args.table);
+    }
+
     println!(
         "Starting minilocal against table={} segment={}",
         args.table, args.segment
@@ -41,7 +56,40 @@ fn main() -> anyhow::Result<()> {
         match minisql_parse::parse_sql(&query_buf) {
             Ok(mut req) => {
                 req.table = args.table.clone();
-                println!("parsed correctly: {:?}", req);
+                if req.aggregates.is_empty() {
+                    match scan_projections(&req.table, args.segment, &req.projections) {
+                        Ok((rows, scanned)) => {
+                            for r in rows {
+                                println!("{}", r.join("\t"));
+                            }
+                            println!(
+                                "Execution Details:\n\
+                                 Rows scanned:       {}\n\
+                                 Segments skipped:   0\n\
+                                 Execution time:     0 ms",
+                                scanned
+                            );
+                        }
+                        Err(e) => eprintln!("scan error: {}", e),
+                    }
+                } else {
+                    let ctx = WorkerContext {
+                        port: 0,
+                        table: args.table.clone(),
+                        segment: args.segment,
+                    };
+                    let partial = execute_query(&ctx, req.clone(), Instant::now());
+                    let (merged, rows_scanned, segments_skipped, exec_ms) =
+                        merge_partials(&[partial]);
+                    let output = format_results(
+                        merged,
+                        rows_scanned,
+                        segments_skipped,
+                        exec_ms,
+                        &req.group_by,
+                    );
+                    println!("{}", output);
+                }
             }
             Err(e) => {
                 eprintln!("parse error: {}", e);
@@ -53,4 +101,63 @@ fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn scan_projections(
+    table: &str,
+    segment: u32,
+    projections: &[String],
+) -> Result<(Vec<Vec<String>>, u64), String> {
+    let schema_path = Path::new(table).join("_schema.ssf");
+    let schema_str =
+        std::fs::read_to_string(&schema_path).map_err(|e| format!("read schema: {}", e))?;
+    let schema = minidist_rs::storage_schema::parse_schema_file(&schema_str)
+        .map_err(|e| format!("parse schema: {}", e))?;
+    let segment_dir = Path::new(table).join(format!("seg-{:06}", segment));
+
+    let mut needed = Vec::new();
+    for name in projections {
+        if name == "*" {
+            needed = schema.iter().map(|c| c.name.clone()).collect();
+            break;
+        }
+        needed.push(name.clone());
+    }
+
+    let mut readers: Vec<(String, ColumnDef, BufReader<File>)> = Vec::new();
+    for col in &schema {
+        if needed.contains(&col.name) {
+            let path = segment_dir.join(format!("{}.bin", col.name));
+            let f = File::open(&path).map_err(|e| format!("open {:?}: {}", path, e))?;
+            readers.push((col.name.clone(), col.clone(), BufReader::new(f)));
+        }
+    }
+
+    let mut rows = Vec::new();
+    let mut rows_scanned = 0u64;
+    loop {
+        let mut row_vals: Vec<Option<ScalarValue>> = Vec::new();
+        let mut eof = false;
+        for (_, def, rdr) in readers.iter_mut() {
+            match read_value(rdr, def) {
+                Ok(v) => row_vals.push(v),
+                Err(ReadError::Eof) => {
+                    eof = true;
+                    break;
+                }
+                Err(ReadError::Io) => {
+                    eof = true;
+                    break;
+                }
+            }
+        }
+        if eof {
+            break;
+        }
+        rows_scanned += 1;
+        let rendered: Vec<String> = row_vals.iter().map(|v| format_scalar(v)).collect();
+        rows.push(rendered);
+    }
+
+    Ok((rows, rows_scanned))
 }

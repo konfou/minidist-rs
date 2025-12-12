@@ -5,9 +5,9 @@ According to schema definition
 
 >The column marked key defines the sort order for all data in the table.
 
-Also the ingest rules state that data must be **sorted by the key column**.
-Yet the load command accepts a `--sort-key` argument.
-Specification does not define which takes precedence.
+Also the ingest rules state that data must be **sorted by the key
+column**. Yet the `load` command accepts a `--sort-key`
+argument. Specification does not define which takes precedence.
 
 ### Currently:
 - The schema key is treated as authoritative.

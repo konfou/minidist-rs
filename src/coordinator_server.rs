@@ -1,5 +1,4 @@
 use crate::coordinator_route::run_query;
-use crate::rpc::QueryRequest;
 use axum::{Router, extract::State, http::StatusCode, routing::post};
 use std::sync::Arc;
 
@@ -30,13 +29,14 @@ async fn handle_query(State(state): State<AppState>, body: String) -> (StatusCod
         return (StatusCode::OK, "PONG".into());
     }
 
-    let req = QueryRequest {
-        query: body,
-        table: state.table.clone(),
-    };
-
-    match run_query(&state.worker_ports, req).await {
-        Ok(r) => (StatusCode::OK, r),
+    match crate::minisql_parse::parse_sql(&body) {
+        Ok(mut req) => {
+            req.table = state.table.clone();
+            match run_query(&state.worker_ports, req).await {
+                Ok(r) => (StatusCode::OK, r),
+                Err(e) => (StatusCode::OK, format!("Error: {}", e)),
+            }
+        }
         Err(e) => (StatusCode::OK, format!("Error: {}", e)),
     }
 }

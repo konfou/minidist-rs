@@ -1,0 +1,52 @@
+sql          = { SOI ~ WHITESPACE* ~ bom? ~ select_stmt ~ WHITESPACE* ~ ";" ~ WHITESPACE* ~ EOI }
+select_stmt  = { kw_select ~ projection ~ kw_from ~ table_name ~ where_clause? ~ group_by_clause? }
+
+star             = _{ "*" }
+projection       = { projection_item ~ ("," ~ projection_item)* }
+projection_item  = { aggregate_expr | star | ident }
+aggregate_expr   = { aggregate_fn ~ "(" ~ (star | ident) ~ ")" }
+aggregate_fn     = { kw_count | kw_sum | kw_avg | kw_min | kw_max }
+
+table_name = @{ ident }
+
+where_clause  = { kw_where ~ boolean_expr }
+boolean_expr  = { predicate ~ (kw_and ~ predicate)* }
+predicate     = { between_expr | comparison_expr }
+comparison_expr = { ident ~ comparison_op ~ literal }
+between_expr  = { ident ~ kw_between ~ literal ~ kw_and ~ literal }
+
+comparison_op = { "=" | "<" | ">" | "<=" | ">=" }
+
+group_by_clause = { kw_group ~ kw_by ~ group_item ~ ("," ~ group_item)* }
+group_item      = @{ ident }
+
+ident   = @{ (ASCII_ALPHANUMERIC | "_")+ }
+literal = { number | string_lit }
+
+string_lit  = ${ "\"" ~ string_char* ~ "\"" }
+string_char =  {
+    !("\"" | "\\") ~ ANY
+  | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+  | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
+}
+
+number = @{
+    "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)? ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
+}
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+bom        =  { "\u{feff}" }
+
+kw_select  = _{ ^"SELECT" }
+kw_from    = _{ ^"FROM" }
+kw_where   = _{ ^"WHERE" }
+kw_and     = _{ ^"AND" }
+kw_between = _{ ^"BETWEEN" }
+kw_group   = _{ ^"GROUP" }
+kw_by      = _{ ^"BY" }
+
+kw_count = _{ ^"COUNT" }
+kw_sum   = _{ ^"SUM" }
+kw_avg   = _{ ^"AVG" }
+kw_min   = _{ ^"MIN" }
+kw_max   = _{ ^"MAX" }

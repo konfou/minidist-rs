@@ -7,10 +7,56 @@ pub struct WorkerInfo {
     pub hostname: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum ScalarValue {
+    Int(i64),
+    Float(f64),
+    String(String),
+    Bool(bool),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum Predicate {
+    Eq,
+    Lt,
+    Gt,
+    Le,
+    Ge,
+    Between,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
+pub enum AggregateFn {
+    Count,
+    Sum,
+    Avg,
+    Min,
+    Max,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FilterExpr {
+    pub column: String,
+    pub pred: Predicate,
+    pub value: ScalarValue,
+    pub value_hi: Option<ScalarValue>, // used for BETWEEN
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AggregateExpr {
+    pub func: AggregateFn,
+    pub column: Option<String>, // None for COUNT(*)
+    pub output_name: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QueryRequest {
     pub query: String,
+    pub projections: Vec<String>,
+    pub aggregates: Vec<AggregateExpr>,
     pub table: String,
+    pub filters: Vec<FilterExpr>,
+    pub group_by: Vec<String>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]

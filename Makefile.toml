@@ -1,0 +1,4 @@
+[tasks.dist]
+script = [
+    "zip -r ${CARGO_MAKE_PACKAGE_METADATA_DIST_ARCHIVE_NAME} src tests docs README.md Cargo.toml"
+]

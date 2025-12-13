@@ -1,0 +1,9 @@
+region | sum_amount
+-------+-----------
+APAC   | 300.000   
+US     | 200.000   
+
+Execution Details:
+Rows scanned:       4
+Segments skipped:   0
+Execution time:     0 ms

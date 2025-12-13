@@ -1,0 +1,3 @@
+id: int64 key
+region: string
+amount: float64

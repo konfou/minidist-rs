@@ -1,0 +1,8 @@
+id: int64 key
+first_name: string
+age: int64
+country: string
+department: string
+active: bool nullable
+start: date nullable
+created: timestamp(ms)

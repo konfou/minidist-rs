@@ -49,7 +49,13 @@ pub fn apply_agg(
 ) {
     match expr.func {
         AggregateFn::Count => {
-            state.count += 1;
+            if let Some(col) = &expr.column {
+                if row.get(col).and_then(|v| v.clone()).is_some() {
+                    state.count += 1;
+                }
+            } else {
+                state.count += 1;
+            }
         }
         AggregateFn::Sum | AggregateFn::Avg => {
             if let Some(val) = expr

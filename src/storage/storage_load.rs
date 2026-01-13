@@ -44,22 +44,23 @@ pub fn load_table(
         col_index.push(idx);
     }
 
+    let key_idx = headers
+        .iter()
+        .position(|h| h == &key_col.name)
+        .ok_or_else(|| format!("CSV missing key column '{}'", key_col.name))?;
+
     let mut rows = Vec::new();
     for r in reader.records() {
         let rec = r.map_err(|e| format!("CSV read error: {}", e))?;
-        rows.push(rec);
+        let key_value = parse_sort_key(&rec, key_idx, key_col)?;
+        rows.push((key_value, rec));
     }
 
     if rows.is_empty() {
         return Err("CSV contains no data rows".into());
     }
 
-    let key_idx = headers
-        .iter()
-        .position(|h| h == &key_col.name)
-        .ok_or_else(|| format!("CSV missing key column '{}'", key_col.name))?;
-
-    rows.sort_by(|a, b| a[key_idx].cmp(&b[key_idx]));
+    rows.sort_by(|a, b| a.0.cmp(&b.0));
 
     for seg in 0..segments {
         let seg_dir = table_dir.join(format!("seg-{:06}", seg));
@@ -91,7 +92,7 @@ pub fn load_table(
     let total_rows = rows.len();
     let rows_per_seg = (total_rows + segments - 1) / segments;
 
-    for (i, record) in rows.into_iter().enumerate() {
+    for (i, (_, record)) in rows.into_iter().enumerate() {
         let seg = (i / rows_per_seg).min(segments - 1);
 
         for (col_idx, col) in schema.iter().enumerate() {
@@ -137,12 +138,8 @@ fn write_value(w: &mut BufWriter<File>, field: &str, col: &ColumnDef) -> Result<
         }
 
         ColumnType::Bool => {
-            // TODO: Also consider if rather true/false, CSV uses 1/0.
-            let byte = if field.eq_ignore_ascii_case("true") {
-                1u8
-            } else {
-                0u8
-            };
+            let value = parse_bool_value(field, &col.name)?;
+            let byte = if value { 1u8 } else { 0u8 };
             w.write_all(&[byte]).map_err(|e| format!("{}", e))
         }
 
@@ -169,5 +166,100 @@ fn write_value(w: &mut BufWriter<File>, field: &str, col: &ColumnDef) -> Result<
             let v: i64 = field.parse().map_err(|e| format!("{}", e))?;
             w.write_all(&v.to_le_bytes()).map_err(|e| format!("{}", e))
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum SortKey {
+    Int(i64),
+    Bool(bool),
+    String(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum SortKeyFloat {
+    Float(f64),
+}
+
+impl Eq for SortKeyFloat {}
+
+impl Ord for SortKeyFloat {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (SortKeyFloat::Float(a), SortKeyFloat::Float(b)) => {
+                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+            }
+        }
+    }
+}
+
+impl PartialOrd for SortKeyFloat {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum SortKeyValue {
+    Primitive(SortKey),
+    Float(SortKeyFloat),
+}
+
+fn parse_sort_key(
+    record: &csv::StringRecord,
+    key_idx: usize,
+    key_col: &ColumnDef,
+) -> Result<SortKeyValue, String> {
+    let field = record
+        .get(key_idx)
+        .ok_or_else(|| "Missing sort key field".to_string())?
+        .trim();
+    if field.is_empty() {
+        return Err(format!(
+            "Sort key column '{}' contains empty value",
+            key_col.name
+        ));
+    }
+    match key_col.col_type {
+        ColumnType::Int32 | ColumnType::Int64 => {
+            let v: i64 = field.parse().map_err(|e| format!("{}", e))?;
+            Ok(SortKeyValue::Primitive(SortKey::Int(v)))
+        }
+        ColumnType::Float64 => {
+            let v: f64 = field.parse().map_err(|e| format!("{}", e))?;
+            if v.is_nan() {
+                return Err("Sort key column contains NaN".into());
+            }
+            Ok(SortKeyValue::Float(SortKeyFloat::Float(v)))
+        }
+        ColumnType::Bool => {
+            let v = parse_bool_value(field, &key_col.name)?;
+            Ok(SortKeyValue::Primitive(SortKey::Bool(v)))
+        }
+        ColumnType::String => Ok(SortKeyValue::Primitive(SortKey::String(field.to_string()))),
+        ColumnType::Date => {
+            let date = chrono::NaiveDate::parse_from_str(field, "%Y-%m-%d")
+                .map_err(|e| format!("{}", e))?;
+            let epoch = chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
+            let days = date.signed_duration_since(epoch).num_days() as i64;
+            Ok(SortKeyValue::Primitive(SortKey::Int(days)))
+        }
+        ColumnType::TimestampMs => {
+            let v: i64 = field.parse().map_err(|e| format!("{}", e))?;
+            Ok(SortKeyValue::Primitive(SortKey::Int(v)))
+        }
+    }
+}
+
+fn parse_bool_value(field: &str, column: &str) -> Result<bool, String> {
+    if field.eq_ignore_ascii_case("true") || field == "1" {
+        Ok(true)
+    } else if field.eq_ignore_ascii_case("false") || field == "0" {
+        Ok(false)
+    } else {
+        Err(format!(
+            "Invalid boolean value '{}' for column '{}'",
+            field, column
+        ))
     }
 }

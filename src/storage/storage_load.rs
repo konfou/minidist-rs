@@ -11,6 +11,9 @@ pub fn load_table(
     segments: usize,
     schema: &[ColumnDef],
 ) -> Result<(), String> {
+    if segments == 0 {
+        return Err("segments must be > 0".into());
+    }
     let key_col = schema
         .iter()
         .find(|c| c.is_key)

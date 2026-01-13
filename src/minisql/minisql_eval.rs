@@ -6,7 +6,7 @@ use std::io::{BufReader, Read, Seek, SeekFrom};
 use crate::rpc::{
     AggregateExpr, AggregateFn, AggregateState, FilterExpr, Predicate, ScalarValue, ValueType,
 };
-use crate::storage_schema::{ColumnDef, ColumnType};
+use crate::storage::storage_schema::{ColumnDef, ColumnType};
 
 pub fn row_matches(filters: &[FilterExpr], row: &HashMap<String, Option<ScalarValue>>) -> bool {
     for f in filters {

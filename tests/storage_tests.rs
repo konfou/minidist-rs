@@ -1,6 +1,6 @@
-use minidist_rs::storage_init::init_table;
-use minidist_rs::storage_load::load_table;
-use minidist_rs::storage_schema::{ColumnType, parse_schema_file};
+use minidist_rs::storage::storage_init::init_table;
+use minidist_rs::storage::storage_load::load_table;
+use minidist_rs::storage::storage_schema::{ColumnType, parse_schema_file};
 use std::fs;
 use std::io::Read;
 use std::path::PathBuf;

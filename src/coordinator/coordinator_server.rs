@@ -1,4 +1,4 @@
-use crate::coordinator_route::run_query;
+use super::coordinator_route::run_query;
 use axum::{Router, extract::State, http::StatusCode, routing::post};
 use std::sync::Arc;
 
@@ -25,7 +25,7 @@ pub async fn serve(port: u16, worker_ports: Vec<u16>, table: &str) -> anyhow::Re
 }
 
 async fn handle_query(State(state): State<AppState>, body: String) -> (StatusCode, String) {
-    match crate::minisql_parse::parse_sql(&body) {
+    match crate::minisql::minisql_parse::parse_sql(&body) {
         Ok(mut req) => {
             req.table = state.table.clone();
             match run_query(&state.worker_ports, req).await {

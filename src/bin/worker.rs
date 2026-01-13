@@ -1,6 +1,6 @@
 use clap::Parser;
-use minidist_rs::worker_exec::WorkerContext;
-use minidist_rs::worker_server;
+use minidist_rs::worker::worker_exec::WorkerContext;
+use minidist_rs::worker::worker_server;
 
 #[derive(Parser, Debug)]
 #[command(name = "worker")]

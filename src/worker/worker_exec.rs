@@ -1,11 +1,11 @@
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use crate::minisql_eval::{
+use crate::minisql::minisql_eval::{
     ReadError, ReaderState, apply_agg, format_scalar, init_reader, read_value, row_matches,
 };
 use crate::rpc::{AggregateState, GroupMap, PartialAggregate, QueryRequest, ScalarValue};
-use crate::storage_schema::ColumnDef;
+use crate::storage::storage_schema::ColumnDef;
 
 #[derive(Debug, Clone)]
 pub struct WorkerContext {
@@ -152,7 +152,7 @@ pub fn execute_query(
 fn load_schema(table_dir: &str) -> Vec<ColumnDef> {
     let path = PathBuf::from(table_dir).join("_schema.ssf");
     let contents = std::fs::read_to_string(&path).unwrap_or_default();
-    crate::storage_schema::parse_schema_file(&contents).unwrap_or_default()
+    crate::storage::storage_schema::parse_schema_file(&contents).unwrap_or_default()
 }
 
 fn segment_path(table_dir: &str, segment: u32) -> PathBuf {

@@ -1,11 +1,13 @@
 use clap::Parser;
-use minidist_rs::coordinator_merge::merge_partials;
-use minidist_rs::minisql_eval::{ReadError, ReaderState, format_scalar, init_reader, read_value};
-use minidist_rs::minisql_parse;
-use minidist_rs::minisql_print::format_results;
+use minidist_rs::coordinator::coordinator_merge::merge_partials;
+use minidist_rs::minisql::minisql_eval::{
+    ReadError, ReaderState, format_scalar, init_reader, read_value,
+};
+use minidist_rs::minisql::minisql_parse;
+use minidist_rs::minisql::minisql_print::format_results;
 use minidist_rs::rpc::ScalarValue;
-use minidist_rs::storage_schema::ColumnDef;
-use minidist_rs::worker_exec::{WorkerContext, execute_query};
+use minidist_rs::storage::storage_schema::ColumnDef;
+use minidist_rs::worker::worker_exec::{WorkerContext, execute_query};
 use std::io::{self, Write};
 use std::path::Path;
 use std::time::Instant;
@@ -110,7 +112,7 @@ fn scan_projections(
     let schema_path = Path::new(table).join("_schema.ssf");
     let schema_str =
         std::fs::read_to_string(&schema_path).map_err(|e| format!("read schema: {}", e))?;
-    let schema = minidist_rs::storage_schema::parse_schema_file(&schema_str)
+    let schema = minidist_rs::storage::storage_schema::parse_schema_file(&schema_str)
         .map_err(|e| format!("parse schema: {}", e))?;
     let segment_dir = Path::new(table).join(format!("seg-{:06}", segment));
 

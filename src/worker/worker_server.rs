@@ -1,5 +1,5 @@
+use super::worker_exec::{WorkerContext, execute_query};
 use crate::rpc::QueryRequest;
-use crate::worker_exec::{WorkerContext, execute_query};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 

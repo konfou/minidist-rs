@@ -1,9 +1,9 @@
-use minidist_rs::coordinator_merge::merge_partials;
-use minidist_rs::minisql_parse::parse_sql;
-use minidist_rs::storage_init::init_table;
-use minidist_rs::storage_load::load_table;
-use minidist_rs::storage_schema::parse_schema_file;
-use minidist_rs::worker_exec::{WorkerContext, execute_query};
+use minidist_rs::coordinator::coordinator_merge::merge_partials;
+use minidist_rs::minisql::minisql_parse::parse_sql;
+use minidist_rs::storage::storage_init::init_table;
+use minidist_rs::storage::storage_load::load_table;
+use minidist_rs::storage::storage_schema::parse_schema_file;
+use minidist_rs::worker::worker_exec::{WorkerContext, execute_query};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};

@@ -1,6 +1,6 @@
 use clap::Parser;
-use minidist_rs::coordinator_cluster;
-use minidist_rs::coordinator_server;
+use minidist_rs::coordinator::coordinator_cluster;
+use minidist_rs::coordinator::coordinator_server;
 
 #[derive(Parser)]
 #[command(name = "coordinator")]

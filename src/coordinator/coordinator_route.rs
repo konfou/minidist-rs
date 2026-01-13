@@ -1,5 +1,5 @@
-use crate::coordinator_merge::merge_partials;
-use crate::minisql_print::format_results;
+use super::coordinator_merge::merge_partials;
+use crate::minisql::minisql_print::format_results;
 use crate::rpc::{PartialAggregate, QueryRequest};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;

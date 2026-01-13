@@ -1,4 +1,4 @@
-use crate::storage_schema::{ColumnDef, ColumnType};
+use crate::storage::storage_schema::{ColumnDef, ColumnType};
 use csv::ReaderBuilder;
 use std::fs::{self, File};
 use std::io::{BufWriter, Write};

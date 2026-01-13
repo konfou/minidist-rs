@@ -1,4 +1,4 @@
-use minidist_rs::minisql_parse::parse_sql;
+use minidist_rs::minisql::minisql_parse::parse_sql;
 use minidist_rs::rpc::{AggregateFn, Predicate};
 
 #[test]

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use crate::storage_schema;
+use crate::storage::storage_schema;
 
 pub fn inspect_schema(dir: &Path) -> Result<String, String> {
     let path = dir.join("_schema.ssf");

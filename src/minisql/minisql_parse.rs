@@ -3,7 +3,7 @@ use pest::Parser;
 use pest_derive::Parser;
 
 #[derive(Parser)]
-#[grammar = "grammar/minisql.pest"]
+#[grammar = "minisql/grammar/minisql.pest"]
 struct SqlParser;
 
 pub fn parse_sql(sql: &str) -> Result<QueryRequest, String> {

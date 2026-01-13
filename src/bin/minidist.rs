@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
-use minidist_rs::{init_table, inspect_metadata, inspect_schema};
+use minidist_rs::storage::storage_init::init_table;
+use minidist_rs::storage::storage_inspect::{inspect_metadata, inspect_schema};
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -74,9 +75,10 @@ fn main() {
                 .map_err(|e| format!("Schema missing: {}", e))
                 .unwrap();
 
-            let schema = minidist_rs::storage_schema::parse_schema_file(&schema_text).unwrap();
+            let schema =
+                minidist_rs::storage::storage_schema::parse_schema_file(&schema_text).unwrap();
 
-            match minidist_rs::storage_load::load_table(
+            match minidist_rs::storage::storage_load::load_table(
                 &dir,
                 &csv,
                 &sort_key,

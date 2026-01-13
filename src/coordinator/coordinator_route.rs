@@ -32,12 +32,22 @@ pub async fn run_query(worker_ports: &[u16], request: QueryRequest) -> anyhow::R
     }
 
     let (merged, rows_scanned, segments_skipped, exec_ms) = merge_partials(&partials);
+    let effective_group_by = if request.aggregates.is_empty() && request.group_by.is_empty() {
+        if request.projections.len() == 1 && request.projections[0] == "*" {
+            Vec::new()
+        } else {
+            request.projections.clone()
+        }
+    } else {
+        request.group_by.clone()
+    };
+
     Ok(format_results(
         merged,
         rows_scanned,
         segments_skipped,
         exec_ms,
-        &request.group_by,
+        &effective_group_by,
     ))
 }
 

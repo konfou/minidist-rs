@@ -38,7 +38,8 @@ pub fn execute_query(
     }
     let segment_dir = segment_path(&ctx.table, ctx.segment);
 
-    let mut needed_cols: HashSet<String> = needed_columns(&req);
+    let effective_group_by = derive_group_by(&req);
+    let mut needed_cols: HashSet<String> = needed_columns(&req, &effective_group_by);
     if needed_cols.is_empty() {
         if let Some(first) = schema.first() {
             needed_cols.insert(first.name.clone());
@@ -111,11 +112,11 @@ pub fn execute_query(
             continue;
         }
 
-        let gkey = if req.group_by.is_empty() {
+        let gkey = if effective_group_by.is_empty() {
             "all".to_string()
         } else {
             let mut parts = Vec::new();
-            for gcol in &req.group_by {
+            for gcol in &effective_group_by {
                 let val = row_values.get(gcol).and_then(|v| v.clone());
                 parts.push(format_scalar(&val));
             }
@@ -159,9 +160,9 @@ fn segment_path(table_dir: &str, segment: u32) -> PathBuf {
     PathBuf::from(table_dir).join(format!("seg-{:06}", segment))
 }
 
-fn needed_columns(req: &QueryRequest) -> HashSet<String> {
+fn needed_columns(req: &QueryRequest, group_by: &[String]) -> HashSet<String> {
     let mut set = HashSet::new();
-    for g in &req.group_by {
+    for g in group_by {
         set.insert(g.clone());
     }
     for agg in &req.aggregates {
@@ -174,6 +175,18 @@ fn needed_columns(req: &QueryRequest) -> HashSet<String> {
     }
     // projections unused in aggregation path
     set
+}
+
+fn derive_group_by(req: &QueryRequest) -> Vec<String> {
+    if req.aggregates.is_empty() && req.group_by.is_empty() {
+        if req.projections.len() == 1 && req.projections[0] == "*" {
+            Vec::new()
+        } else {
+            req.projections.clone()
+        }
+    } else {
+        req.group_by.clone()
+    }
 }
 
 fn open_readers(

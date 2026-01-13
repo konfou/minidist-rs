@@ -22,3 +22,6 @@ The libraries (crates) used are:
   * csv/rmp/serde for CSV/MP serialization,
   * pest for SQL grammar/parsing,
   * tokio for async & RPC (coordinator-workers),
+
+*This project is my own implementation of a semester assignment shared
+by a friend.*

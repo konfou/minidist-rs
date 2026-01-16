@@ -13,3 +13,11 @@
   auto-detect raw vs `RLE1` run-length encoded files.
 - Merging: coordinator merges aggregates by simple arithmetic; no
   distributed shuffle or repartitioning.
+
+## Parser
+
+The PEG engine uses backtracking, which introduces overhead compared to
+deterministic parser generators or zero-copy combinator libraries.
+However, for the expected usage (human-written MiniSQL queries of
+limited size), Pest's performance is acceptable. The parsing
+cost is predictable enough for interactive or analytical workloads.

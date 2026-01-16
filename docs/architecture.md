@@ -1,6 +1,6 @@
 # Architecture
 
-Core binaries:
+## Core binaries:
 
 - **minidist** (storage CLI):
   - `init`: create a table directory with schema/metadata.
@@ -21,7 +21,7 @@ Core binaries:
   - Executes scans/filters/aggregations against its segment’s columnar
     files.
 
-Auxiliary:
+## Auxiliary:
 
 - **netrepl**: client utility to send SQL over HTTP to the coordinator;
   not part of the formal system.
@@ -29,7 +29,7 @@ Auxiliary:
   segment (also uses the same result formatter as coordinator/netrepl);
   debug-only.
 
-Data flow:
+## Data flow:
 
 1. `coordinator` starts workers for each segment.
 2. Client (e.g., `netrepl`) `POST /query` to coordinator with SQL.
@@ -40,7 +40,7 @@ Data flow:
    sum/count); failed workers are retried once, then treated as skipped
    segments in the merged stats; results are returned to the client.
 
-Optimizations:
+## Optimizations:
 
 - Workers apply simple zone-map pruning per segment (min/max per filter
   column) and may skip their segment entirely; skipped segments are
